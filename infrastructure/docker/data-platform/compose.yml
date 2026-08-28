@@ -1,0 +1,146 @@
+name: retail-intelligence-data-platform
+
+services:
+  postgres:
+    image: postgres:18.6-bookworm
+    container_name: retail-postgres
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_USER: retail_admin
+      POSTGRES_DB: retail_platform
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_admin_password
+      POSTGRES_INITDB_ARGS: >-
+        --encoding=UTF8
+        --locale=C.UTF-8
+        --data-checksums
+        --auth-host=scram-sha-256
+
+    secrets:
+      - postgres_admin_password
+      - postgres_migration_password
+      - postgres_app_password
+      - postgres_cdc_password
+      - postgres_loader_password
+      - postgres_analyst_password
+      - postgres_monitor_password
+
+    ports:
+      - "127.0.0.1:5439:5432"
+
+    volumes:
+      - retail_postgres_data:/var/lib/postgresql
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+
+    networks:
+      - retail_data_network
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready --username=retail_admin --dbname=retail_platform"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+    shm_size: "2gb"
+    mem_limit: "16g"
+    cpus: 8
+
+    command:
+      - postgres
+      - -c
+      - password_encryption=scram-sha-256
+      - -c
+      - wal_level=logical
+      - -c
+      - max_wal_senders=10
+      - -c
+      - max_replication_slots=10
+      - -c
+      - max_connections=150
+      - -c
+      - shared_buffers=4GB
+      - -c
+      - effective_cache_size=12GB
+      - -c
+      - maintenance_work_mem=512MB
+      - -c
+      - work_mem=16MB
+      - -c
+      - track_io_timing=on
+      - -c
+      - log_min_duration_statement=1000
+      - -c
+      - output_plugin_libraries=pgoutput
+  
+  flyway:
+    image: redgate/flyway:13.3
+    container_name: retail-flyway
+
+    profiles:
+      - migration
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    entrypoint:
+      - /bin/sh
+      - -c
+
+    command:
+      - |
+        export FLYWAY_PASSWORD="$$(tr -d '\r\n' < /run/secrets/postgres_migration_password)"
+
+        exec flyway \
+          -url=jdbc:postgresql://postgres:5432/retail_platform \
+          -user=retail_migration \
+          -defaultSchema=audit \
+          -locations=filesystem:/flyway/sql/versioned,filesystem:/flyway/sql/repeatable,filesystem:/flyway/sql/callbacks \
+          -connectRetries=60 \
+          -validateMigrationNaming=true \
+          "$${FLYWAY_COMMAND:-info}"
+
+    secrets:
+      - postgres_migration_password
+
+    volumes:
+      - ../../../source-system/database/migrations:/flyway/sql:ro
+
+    networks:
+      - retail_data_network
+
+secrets:
+  postgres_admin_password:
+    file: ../../../secrets/postgres/admin_password.txt
+
+  postgres_migration_password:
+    file: ../../../secrets/postgres/migration_password.txt
+
+  postgres_app_password:
+    file: ../../../secrets/postgres/app_password.txt
+
+  postgres_cdc_password:
+    file: ../../../secrets/postgres/cdc_password.txt
+
+  postgres_loader_password:
+    file: ../../../secrets/postgres/loader_password.txt
+
+  postgres_analyst_password:
+    file: ../../../secrets/postgres/analyst_password.txt
+
+  postgres_monitor_password:
+    file: ../../../secrets/postgres/monitor_password.txt
+
+volumes:
+  retail_postgres_data:
+    name: retail-postgres-data
+
+networks:
+  retail_data_network:
+    name: retail-data-network
+    # internal: true

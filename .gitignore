@@ -1,0 +1,219 @@
+# =========================================================
+# Python
+# =========================================================
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+dist/
+build/
+*.egg-info/
+
+# =========================================================
+# Environment files and secrets
+# =========================================================
+.env
+.env.*
+!.env.example
+secrets/
+credentials/
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+
+# =========================================================
+# AWS and cloud credentials
+# =========================================================
+.aws/
+.aws-sam/
+serverless/
+cdk.out/
+
+# =========================================================
+# Java, Maven and Gradle
+# =========================================================
+target/
+*.class
+*.jar
+*.war
+*.ear
+.gradle/
+.mvn/timing.properties
+
+# Keep Maven Wrapper files when created
+!.mvn/wrapper/
+!mvnw
+!mvnw.cmd
+
+# =========================================================
+# Node.js and frontend
+# =========================================================
+node_modules/
+.npm/
+.yarn/
+.pnpm-store/
+.next/
+.nuxt/
+coverage/
+*.tsbuildinfo
+
+# Frontend production builds
+applications/frontend/**/dist/
+applications/frontend/**/build/
+
+# =========================================================
+# Large historical and generated datasets
+# =========================================================
+source-system/public-datasets/raw/
+source-system/public-datasets/downloads/
+source-system/public-datasets/extracted/
+
+data/raw/
+data/processed/
+data/generated/
+data/checkpoints/
+data/exports/
+data/archive/
+
+# Keep small controlled samples
+!data/sample/
+!data/sample/**
+
+# =========================================================
+# Data file formats outside controlled sample directory
+# =========================================================
+*.parquet
+*.orc
+*.avro
+*.arrow
+*.feather
+*.delta
+*.snappy
+*.gz
+*.zip
+*.7z
+*.tar
+*.tgz
+
+# =========================================================
+# Spark, Hadoop and Delta local state
+# =========================================================
+spark-warehouse/
+metastore_db/
+derby.log
+.checkpoints/
+_spark_metadata/
+_committed_*
+_started_*
+*.crc
+
+# =========================================================
+# Kafka and streaming state
+# =========================================================
+kafka-data/
+zookeeper-data/
+kraft-data/
+connect-offsets/
+schema-registry-data/
+
+# =========================================================
+# PostgreSQL, MongoDB and Redis local volumes
+# =========================================================
+postgres-data/
+mongodb-data/
+redis-data/
+minio-data/
+
+# =========================================================
+# Airflow
+# =========================================================
+airflow.db
+airflow.cfg
+webserver_config.py
+airflow-logs/
+
+# =========================================================
+# Machine learning artifacts
+# =========================================================
+mlruns/
+mlartifacts/
+models/
+checkpoints/
+wandb/
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.joblib
+*.pkl
+
+# =========================================================
+# AI and vector databases
+# =========================================================
+vector-data/
+chroma-data/
+qdrant-data/
+faiss-data/
+tokenizer-cache/
+huggingface-cache/
+
+# =========================================================
+# Terraform
+# =========================================================
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Terraform variable files may contain secrets
+*.tfvars
+*.tfvars.json
+
+# Keep safe examples
+!*.tfvars.example
+
+# =========================================================
+# Kubernetes and Helm secrets
+# =========================================================
+*-secret.yaml
+*-secrets.yaml
+secrets.yaml
+
+# =========================================================
+# Docker local overrides
+# =========================================================
+docker-compose.override.yml
+
+# =========================================================
+# Logs, temporary files and local caches
+# =========================================================
+logs/
+*.log
+tmp/
+temp/
+.cache/
+
+# =========================================================
+# IDE and operating system
+# =========================================================
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
