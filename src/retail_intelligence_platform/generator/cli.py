@@ -15,6 +15,9 @@ from retail_intelligence_platform.generator.database import (
 from retail_intelligence_platform.generator.loaders.catalog import (
     load_catalog as load_catalog_records,
 )
+from retail_intelligence_platform.generator.loaders.identity import (
+    load_identity as load_identity_records,
+)
 from retail_intelligence_platform.generator.loaders.inventory import (
     load_inventory as load_inventory_records,
 )
@@ -279,6 +282,59 @@ def load_inventory_command(
     console.print(f"Total inventory rows: {result.total_rows:,}")
 
 
+@app.command("load-identity")
+def load_identity_command(
+    profile_name: Annotated[
+        str | None,
+        typer.Option(
+            "--profile",
+            "-p",
+            help="Generation profile name.",
+        ),
+    ] = None,
+    yes: Annotated[
+        bool,
+        typer.Option(
+            "--yes",
+            help=("Acknowledge execution of a large generation profile."),
+        ),
+    ] = False,
+) -> None:
+    """Load customers, credentials and addresses."""
+
+    settings, profile = resolve_profile(profile_name)
+    require_profile_confirmation(profile, yes)
+
+    expected_addresses = profile.customer_count * profile.addresses_per_customer
+
+    console.print(f"[bold]Identity profile:[/bold] {profile.name}")
+    console.print(
+        f"[bold]Expected identity rows:[/bold] "
+        f"{profile.customer_count:,} customers, "
+        f"{profile.customer_count:,} credentials, "
+        f"{expected_addresses:,} addresses"
+    )
+
+    try:
+        check_database(settings)
+
+        result = load_identity_records(
+            settings,
+            profile,
+        )
+    except Exception as error:
+        console.print(f"[bold red]Identity load failed:[/bold red] {error}")
+
+        raise typer.Exit(code=1) from error
+
+    console.print("[bold green]Identity load completed[/bold green]")
+    console.print(f"Customers: {result.customers:,}")
+    console.print(f"Credentials: {result.credentials:,}")
+    console.print(f"Addresses: {result.addresses:,}")
+    console.print(f"Default addresses: {result.default_addresses:,}")
+    console.print(f"Total identity rows: {result.total_rows:,}")
+
+
 @app.command("load-foundation")
 def load_foundation_command(
     profile_name: Annotated[
@@ -297,7 +353,7 @@ def load_foundation_command(
         ),
     ] = False,
 ) -> None:
-    """Load catalogue followed by inventory."""
+    """Load identity, catalogue and inventory."""
 
     settings, profile = resolve_profile(profile_name)
     require_profile_confirmation(profile, yes)
@@ -307,13 +363,19 @@ def load_foundation_command(
     try:
         check_database(settings)
 
-        console.print("[bold]Stage 1/2:[/bold] Catalogue")
+        console.print("[bold]Stage 1/3:[/bold] Identity")
+        identity_result = load_identity_records(
+            settings,
+            profile,
+        )
+
+        console.print("[bold]Stage 2/3:[/bold] Catalogue")
         catalog_result = load_catalog_records(
             settings,
             profile,
         )
 
-        console.print("[bold]Stage 2/2:[/bold] Inventory")
+        console.print("[bold]Stage 3/3:[/bold] Inventory")
         inventory_result = load_inventory_records(
             settings,
             profile,
@@ -323,9 +385,14 @@ def load_foundation_command(
 
         raise typer.Exit(code=1) from error
 
-    total_rows = catalog_result.total_rows + inventory_result.total_rows
+    total_rows = (
+        identity_result.total_rows
+        + catalog_result.total_rows
+        + inventory_result.total_rows
+    )
 
     console.print("[bold green]Foundation load completed[/bold green]")
+    console.print(f"Identity rows: {identity_result.total_rows:,}")
     console.print(f"Catalogue rows: {catalog_result.total_rows:,}")
     console.print(f"Inventory rows: {inventory_result.total_rows:,}")
     console.print(f"Foundation total: {total_rows:,}")

@@ -5,6 +5,9 @@ from retail_intelligence_platform.generator.cli import app
 from retail_intelligence_platform.generator.loaders.catalog import (
     CatalogLoadResult,
 )
+from retail_intelligence_platform.generator.loaders.identity import (
+    IdentityLoadResult,
+)
 from retail_intelligence_platform.generator.loaders.inventory import (
     InventoryLoadResult,
 )
@@ -249,6 +252,16 @@ def test_foundation_loads_in_dependency_order(
             reorder_required=10,
         )
 
+    def load_identity(settings, profile):
+        execution_order.append("identity")
+
+        return IdentityLoadResult(
+            customers=20,
+            credentials=20,
+            addresses=40,
+            default_addresses=20,
+        )
+
     monkeypatch.setattr(
         cli_module,
         "load_catalog_records",
@@ -259,6 +272,12 @@ def test_foundation_loads_in_dependency_order(
         cli_module,
         "load_inventory_records",
         load_inventory,
+    )
+
+    monkeypatch.setattr(
+        cli_module,
+        "load_identity_records",
+        load_identity,
     )
 
     result = runner.invoke(
@@ -274,12 +293,13 @@ def test_foundation_loads_in_dependency_order(
 
     assert execution_order == [
         "validate",
+        "identity",
         "catalog",
         "inventory",
     ]
 
     assert "Foundation load completed" in result.stdout
-    assert "Foundation total: 268" in result.stdout
+    assert "Foundation total: 348" in result.stdout
 
 
 def test_foundation_stops_when_catalog_fails(
@@ -308,8 +328,13 @@ def test_foundation_stops_when_catalog_fails(
 
     monkeypatch.setattr(
         cli_module,
-        "load_inventory_records",
-        track_inventory,
+        "load_identity_records",
+        lambda settings, profile: IdentityLoadResult(
+            customers=20,
+            credentials=20,
+            addresses=40,
+            default_addresses=20,
+        ),
     )
 
     result = runner.invoke(
@@ -324,3 +349,52 @@ def test_foundation_stops_when_catalog_fails(
     assert result.exit_code == 1
     assert inventory_called is False
     assert "catalogue unavailable" in result.stdout
+
+
+def test_large_identity_load_requires_yes() -> None:
+    result = runner.invoke(
+        app,
+        [
+            "load-identity",
+            "--profile",
+            "large",
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert "Execution blocked" in result.stdout
+
+
+def test_smoke_identity_load_executes(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(
+        cli_module,
+        "check_database",
+        lambda settings: None,
+    )
+
+    monkeypatch.setattr(
+        cli_module,
+        "load_identity_records",
+        lambda settings, profile: IdentityLoadResult(
+            customers=20,
+            credentials=20,
+            addresses=40,
+            default_addresses=20,
+        ),
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "load-identity",
+            "--profile",
+            "smoke",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "Identity load completed" in result.stdout
+    assert "Customers: 20" in result.stdout
+    assert "Total identity rows: 80" in result.stdout
