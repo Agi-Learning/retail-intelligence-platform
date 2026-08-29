@@ -15,6 +15,9 @@ from retail_intelligence_platform.generator.database import (
 from retail_intelligence_platform.generator.loaders.catalog import (
     load_catalog as load_catalog_records,
 )
+from retail_intelligence_platform.generator.loaders.inventory import (
+    load_inventory as load_inventory_records,
+)
 from retail_intelligence_platform.generator.profiles import (
     available_profiles,
     get_profile,
@@ -151,6 +154,26 @@ _PROTECTED_PROFILES = frozenset(
 )
 
 
+def require_profile_confirmation(
+    profile,
+    confirmed: bool,
+) -> None:
+    """Block expensive profiles without explicit consent."""
+
+    if profile.name not in _PROTECTED_PROFILES or confirmed:
+        return
+
+    console.print("[bold yellow]Execution blocked.[/bold yellow]")
+    console.print(
+        f"Profile {profile.name!r} is protected "
+        f"and estimates "
+        f"{profile.estimated_total_rows:,} rows."
+    )
+    console.print("Review the plan, then rerun with --yes.")
+
+    raise typer.Exit(code=2)
+
+
 @app.command("load-catalog")
 def load_catalog_command(
     profile_name: Annotated[
@@ -173,16 +196,7 @@ def load_catalog_command(
 
     settings, profile = resolve_profile(profile_name)
 
-    if profile.name in _PROTECTED_PROFILES and not yes:
-        console.print("[bold yellow]Execution blocked.[/bold yellow]")
-        console.print(
-            f"Profile {profile.name!r} is protected "
-            f"and estimates "
-            f"{profile.estimated_total_rows:,} rows."
-        )
-        console.print("Review the plan, then rerun with --yes.")
-
-        raise typer.Exit(code=2)
+    require_profile_confirmation(profile, yes)
 
     console.print(f"[bold]Catalogue profile:[/bold] {profile.name}")
     console.print(
@@ -212,6 +226,109 @@ def load_catalog_command(
     console.print(f"Products: {result.products:,}")
     console.print(f"Product prices: {result.product_prices:,}")
     console.print(f"Total catalogue rows: {result.total_rows:,}")
+
+
+@app.command("load-inventory")
+def load_inventory_command(
+    profile_name: Annotated[
+        str | None,
+        typer.Option(
+            "--profile",
+            "-p",
+            help="Generation profile name.",
+        ),
+    ] = None,
+    yes: Annotated[
+        bool,
+        typer.Option(
+            "--yes",
+            help=("Acknowledge execution of a large generation profile."),
+        ),
+    ] = False,
+) -> None:
+    """Load warehouses and product stock."""
+
+    settings, profile = resolve_profile(profile_name)
+    require_profile_confirmation(profile, yes)
+
+    expected_stock = profile.product_count * profile.warehouses_per_product
+
+    console.print(f"[bold]Inventory profile:[/bold] {profile.name}")
+    console.print(
+        f"[bold]Expected inventory rows:[/bold] "
+        f"{profile.warehouse_count:,} warehouses, "
+        f"{expected_stock:,} stock rows"
+    )
+
+    try:
+        check_database(settings)
+
+        result = load_inventory_records(
+            settings,
+            profile,
+        )
+    except Exception as error:
+        console.print(f"[bold red]Inventory load failed:[/bold red] {error}")
+
+        raise typer.Exit(code=1) from error
+
+    console.print("[bold green]Inventory load completed[/bold green]")
+    console.print(f"Warehouses: {result.warehouses:,}")
+    console.print(f"Stock rows: {result.stock:,}")
+    console.print(f"Reorder required: {result.reorder_required:,}")
+    console.print(f"Total inventory rows: {result.total_rows:,}")
+
+
+@app.command("load-foundation")
+def load_foundation_command(
+    profile_name: Annotated[
+        str | None,
+        typer.Option(
+            "--profile",
+            "-p",
+            help="Generation profile name.",
+        ),
+    ] = None,
+    yes: Annotated[
+        bool,
+        typer.Option(
+            "--yes",
+            help=("Acknowledge execution of a large generation profile."),
+        ),
+    ] = False,
+) -> None:
+    """Load catalogue followed by inventory."""
+
+    settings, profile = resolve_profile(profile_name)
+    require_profile_confirmation(profile, yes)
+
+    console.print(f"[bold]Foundation profile:[/bold] {profile.name}")
+
+    try:
+        check_database(settings)
+
+        console.print("[bold]Stage 1/2:[/bold] Catalogue")
+        catalog_result = load_catalog_records(
+            settings,
+            profile,
+        )
+
+        console.print("[bold]Stage 2/2:[/bold] Inventory")
+        inventory_result = load_inventory_records(
+            settings,
+            profile,
+        )
+    except Exception as error:
+        console.print(f"[bold red]Foundation load failed:[/bold red] {error}")
+
+        raise typer.Exit(code=1) from error
+
+    total_rows = catalog_result.total_rows + inventory_result.total_rows
+
+    console.print("[bold green]Foundation load completed[/bold green]")
+    console.print(f"Catalogue rows: {catalog_result.total_rows:,}")
+    console.print(f"Inventory rows: {inventory_result.total_rows:,}")
+    console.print(f"Foundation total: {total_rows:,}")
 
 
 if __name__ == "__main__":

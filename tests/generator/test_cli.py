@@ -5,6 +5,9 @@ from retail_intelligence_platform.generator.cli import app
 from retail_intelligence_platform.generator.loaders.catalog import (
     CatalogLoadResult,
 )
+from retail_intelligence_platform.generator.loaders.inventory import (
+    InventoryLoadResult,
+)
 
 runner = CliRunner()
 
@@ -167,3 +170,157 @@ def test_catalogue_loader_failure_is_safe(
     assert result.exit_code == 1
     assert "Catalogue load failed" in result.stdout
     assert "simulated failure" in result.stdout
+
+
+def test_large_inventory_load_requires_yes() -> None:
+    result = runner.invoke(
+        app,
+        [
+            "load-inventory",
+            "--profile",
+            "large",
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert "Execution blocked" in result.stdout
+
+
+def test_smoke_inventory_load_executes(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(
+        cli_module,
+        "check_database",
+        lambda settings: None,
+    )
+
+    monkeypatch.setattr(
+        cli_module,
+        "load_inventory_records",
+        lambda settings, profile: InventoryLoadResult(
+            warehouses=3,
+            stock=100,
+            reorder_required=10,
+        ),
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "load-inventory",
+            "--profile",
+            "smoke",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "Inventory load completed" in result.stdout
+    assert "Stock rows: 100" in result.stdout
+
+
+def test_foundation_loads_in_dependency_order(
+    monkeypatch,
+) -> None:
+    execution_order: list[str] = []
+
+    monkeypatch.setattr(
+        cli_module,
+        "check_database",
+        lambda settings: execution_order.append("validate"),
+    )
+
+    def load_catalog(settings, profile):
+        execution_order.append("catalog")
+
+        return CatalogLoadResult(
+            brands=5,
+            categories=10,
+            products=50,
+            product_prices=100,
+        )
+
+    def load_inventory(settings, profile):
+        execution_order.append("inventory")
+
+        return InventoryLoadResult(
+            warehouses=3,
+            stock=100,
+            reorder_required=10,
+        )
+
+    monkeypatch.setattr(
+        cli_module,
+        "load_catalog_records",
+        load_catalog,
+    )
+
+    monkeypatch.setattr(
+        cli_module,
+        "load_inventory_records",
+        load_inventory,
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "load-foundation",
+            "--profile",
+            "smoke",
+        ],
+    )
+
+    assert result.exit_code == 0
+
+    assert execution_order == [
+        "validate",
+        "catalog",
+        "inventory",
+    ]
+
+    assert "Foundation load completed" in result.stdout
+    assert "Foundation total: 268" in result.stdout
+
+
+def test_foundation_stops_when_catalog_fails(
+    monkeypatch,
+) -> None:
+    inventory_called = False
+
+    monkeypatch.setattr(
+        cli_module,
+        "check_database",
+        lambda settings: None,
+    )
+
+    def fail_catalog(settings, profile):
+        raise RuntimeError("catalogue unavailable")
+
+    def track_inventory(settings, profile):
+        nonlocal inventory_called
+        inventory_called = True
+
+    monkeypatch.setattr(
+        cli_module,
+        "load_catalog_records",
+        fail_catalog,
+    )
+
+    monkeypatch.setattr(
+        cli_module,
+        "load_inventory_records",
+        track_inventory,
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "load-foundation",
+            "--profile",
+            "smoke",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert inventory_called is False
+    assert "catalogue unavailable" in result.stdout
