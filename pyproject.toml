@@ -7,11 +7,26 @@ authors = [
     { name = "externalrepogit", email = "agilandeena41@gmail.com" }
 ]
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "faker>=37,<38",
+    "psycopg[binary]>=3.2,<4",
+    "pydantic-settings>=2.10,<3",
+    "rich>=14,<15",
+    "typer>=0.16,<1",
+]
 
 [project.scripts]
 retail-intelligence-platform = "retail_intelligence_platform:main"
+retail-data = "retail_intelligence_platform.generator.cli:app"
 
 [build-system]
 requires = ["uv_build>=0.12.7,<0.13.0"]
 build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "mypy>=1.17,<2",
+    "pytest>=8,<9",
+    "pytest-cov>=6,<7",
+    "ruff>=0.12,<1",
+]
