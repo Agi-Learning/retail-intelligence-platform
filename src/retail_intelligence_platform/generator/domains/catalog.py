@@ -2,7 +2,7 @@
 
 from collections.abc import Iterator
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 from uuid import NAMESPACE_URL, UUID, uuid5
@@ -10,7 +10,6 @@ from uuid import NAMESPACE_URL, UUID, uuid5
 from retail_intelligence_platform.generator.profiles import (
     GenerationProfile,
 )
-
 
 _CATALOG_NAMESPACE = uuid5(
     NAMESPACE_URL,
@@ -21,14 +20,14 @@ _HISTORICAL_PRICE_START = datetime(
     2025,
     1,
     1,
-    tzinfo=timezone.utc,
+    tzinfo=UTC,
 )
 
 _CURRENT_PRICE_START = datetime(
     2026,
     1,
     1,
-    tzinfo=timezone.utc,
+    tzinfo=UTC,
 )
 
 
