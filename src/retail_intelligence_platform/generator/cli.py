@@ -12,6 +12,9 @@ from retail_intelligence_platform.generator.config import (
 from retail_intelligence_platform.generator.database import (
     check_database,
 )
+from retail_intelligence_platform.generator.loaders.catalog import (
+    load_catalog as load_catalog_records,
+)
 from retail_intelligence_platform.generator.profiles import (
     available_profiles,
     get_profile,
@@ -137,6 +140,78 @@ def list_profiles() -> None:
         )
 
     console.print(table)
+
+
+_PROTECTED_PROFILES = frozenset(
+    {
+        "medium",
+        "large",
+        "stress",
+    }
+)
+
+
+@app.command("load-catalog")
+def load_catalog_command(
+    profile_name: Annotated[
+        str | None,
+        typer.Option(
+            "--profile",
+            "-p",
+            help="Generation profile name.",
+        ),
+    ] = None,
+    yes: Annotated[
+        bool,
+        typer.Option(
+            "--yes",
+            help=("Acknowledge execution of a large generation profile."),
+        ),
+    ] = False,
+) -> None:
+    """Load deterministic catalogue records."""
+
+    settings, profile = resolve_profile(profile_name)
+
+    if profile.name in _PROTECTED_PROFILES and not yes:
+        console.print("[bold yellow]Execution blocked.[/bold yellow]")
+        console.print(
+            f"Profile {profile.name!r} is protected "
+            f"and estimates "
+            f"{profile.estimated_total_rows:,} rows."
+        )
+        console.print("Review the plan, then rerun with --yes.")
+
+        raise typer.Exit(code=2)
+
+    console.print(f"[bold]Catalogue profile:[/bold] {profile.name}")
+    console.print(
+        f"[bold]Expected catalogue rows:[/bold] "
+        f"{profile.brand_count:,} brands, "
+        f"{profile.category_count:,} categories, "
+        f"{profile.product_count:,} products, "
+        f"{profile.product_count * profile.prices_per_product:,} "
+        "prices"
+    )
+
+    try:
+        check_database(settings)
+
+        result = load_catalog_records(
+            settings,
+            profile,
+        )
+    except Exception as error:
+        console.print(f"[bold red]Catalogue load failed:[/bold red] {error}")
+
+        raise typer.Exit(code=1) from error
+
+    console.print("[bold green]Catalogue load completed[/bold green]")
+    console.print(f"Brands: {result.brands:,}")
+    console.print(f"Categories: {result.categories:,}")
+    console.print(f"Products: {result.products:,}")
+    console.print(f"Product prices: {result.product_prices:,}")
+    console.print(f"Total catalogue rows: {result.total_rows:,}")
 
 
 if __name__ == "__main__":
