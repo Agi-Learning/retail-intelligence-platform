@@ -37,10 +37,10 @@ class CatalogLoadResult:
         return self.brands + self.categories + self.products + self.product_prices
 
 
-def batched[_Record](
-    records: Iterable[_Record],
+def batched[Record](
+    records: Iterable[Record],
     batch_size: int,
-) -> Iterator[list[_Record]]:
+) -> Iterator[list[Record]]:
     """Yield bounded lists without materializing all records."""
 
     if batch_size <= 0:
