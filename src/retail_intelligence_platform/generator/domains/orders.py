@@ -112,7 +112,7 @@ def formatted_order_number(order_number: int) -> str:
     return f"ORD-2025-{order_number:08d}"
 
 
-def _final_order_status(order_number: int) -> str:
+def final_order_status(order_number: int) -> str:
     if order_number % 20 == 0:
         return "CANCELLED"
 
@@ -216,7 +216,7 @@ def generate_orders(
             order_number=formatted_order_number(order_number),
             customer_email=cart.customer_email,
             cart_public_id=cart.public_id,
-            status=_final_order_status(order_number),
+            status=final_order_status(order_number),
             currency_code="INR",
             subtotal_amount=(subtotal_amount.quantize(_MONEY_SCALE)),
             discount_amount=(discount_amount.quantize(_MONEY_SCALE)),
