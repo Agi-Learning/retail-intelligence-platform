@@ -195,12 +195,12 @@ def generate_audit_events(
             yield AuditEventRecord(
                 event_key=stable_audit_event_key(
                     order.public_id,
-                    "ORDER_CREATED",
+                    action,
                 ),
-                actor_type="CUSTOMER",
-                actor_id=order.customer_email,
-                action="ORDER_CREATED",
-                entity_type="ORDER",
+                actor_type=actor_type,
+                actor_id=actor_id,
+                action=action,
+                entity_type=entity_type,
                 entity_id=str(order.public_id),
                 source_ip=source_ip,
                 correlation_id=correlation_id,
