@@ -198,6 +198,14 @@ def generate_products(
         )
 
 
+def current_product_list_price(
+    sequence_number: int,
+) -> Decimal:
+    """Return the deterministic current product price."""
+
+    return Decimal(100 + ((sequence_number * 37) % 50_000)).quantize(Decimal("0.0001"))
+
+
 def generate_product_prices(
     profile: GenerationProfile,
 ) -> Iterator[ProductPriceRecord]:
@@ -209,9 +217,7 @@ def generate_product_prices(
     ):
         sku = product_sku(sequence_number)
 
-        base_price = Decimal(100 + ((sequence_number * 37) % 50_000)).quantize(
-            Decimal("0.0001")
-        )
+        base_price = current_product_list_price(sequence_number)
 
         historical_price = (base_price * Decimal("1.1000")).quantize(Decimal("0.0001"))
 
