@@ -7,6 +7,17 @@ from retail_intelligence_platform.architecture.domains import (
     validate_domain_manifest,
     write_domain_manifest,
 )
+from retail_intelligence_platform.architecture.frontend import (
+    ADMIN_ONLY_DOMAINS,
+    CUSTOMER_AND_ADMIN_DOMAINS,
+    CUSTOMER_ONLY_DOMAINS,
+    FRONTEND_POLICY_COLUMNS,
+    INTERNAL_ONLY_DOMAINS,
+    FrontendPolicyError,
+    FrontendPolicySummary,
+    validate_frontend_policy_manifest,
+    write_frontend_policy_manifest,
+)
 from retail_intelligence_platform.architecture.manifest import (
     MANIFEST_COLUMNS,
     validate_implementation_manifest,
@@ -39,7 +50,12 @@ from retail_intelligence_platform.architecture.services import (
 )
 
 __all__ = [
+    "ADMIN_ONLY_DOMAINS",
+    "CUSTOMER_AND_ADMIN_DOMAINS",
+    "CUSTOMER_ONLY_DOMAINS",
     "DOMAIN_MANIFEST_COLUMNS",
+    "FRONTEND_POLICY_COLUMNS",
+    "INTERNAL_ONLY_DOMAINS",
     "MANIFEST_COLUMNS",
     "RELATIONSHIP_MANIFEST_COLUMNS",
     "SERVICE_MANIFEST_COLUMNS",
@@ -48,6 +64,8 @@ __all__ = [
     "CdcMode",
     "DomainManifestError",
     "DomainManifestSummary",
+    "FrontendPolicyError",
+    "FrontendPolicySummary",
     "PolicySummary",
     "RelationshipManifestError",
     "RelationshipManifestSummary",
@@ -56,11 +74,13 @@ __all__ = [
     "summarize_table_policies",
     "validate_architecture",
     "validate_domain_manifest",
+    "validate_frontend_policy_manifest",
     "validate_implementation_manifest",
     "validate_relationship_manifest",
     "validate_service_manifest",
     "validate_table_policies",
     "write_domain_manifest",
+    "write_frontend_policy_manifest",
     "write_implementation_manifest",
     "write_relationship_manifest",
     "write_service_manifest",
