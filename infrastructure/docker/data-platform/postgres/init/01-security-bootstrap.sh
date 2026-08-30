@@ -146,6 +146,9 @@ GRANT CONNECT ON DATABASE retail_platform TO retail_loader;
 GRANT CONNECT ON DATABASE retail_platform TO retail_analyst;
 GRANT CONNECT ON DATABASE retail_platform TO retail_monitor;
 
+GRANT CREATE
+    ON DATABASE retail_platform
+    TO retail_owner;
 /*
 =========================================================
 EXTENSIONS
