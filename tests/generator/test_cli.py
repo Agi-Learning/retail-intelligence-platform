@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from typer.testing import CliRunner
 
 import retail_intelligence_platform.generator.cli as cli_module
@@ -5,11 +7,26 @@ from retail_intelligence_platform.generator.cli import app
 from retail_intelligence_platform.generator.loaders.catalog import (
     CatalogLoadResult,
 )
+from retail_intelligence_platform.generator.loaders.commerce import (
+    CommerceLoadResult,
+)
+from retail_intelligence_platform.generator.loaders.events import (
+    EventLoadResult,
+)
 from retail_intelligence_platform.generator.loaders.identity import (
     IdentityLoadResult,
 )
 from retail_intelligence_platform.generator.loaders.inventory import (
     InventoryLoadResult,
+)
+from retail_intelligence_platform.generator.loaders.orders import (
+    OrderLoadResult,
+)
+from retail_intelligence_platform.generator.loaders.payments import (
+    PaymentLoadResult,
+)
+from retail_intelligence_platform.generator.loaders.reservations import (
+    ReservationLoadResult,
 )
 
 runner = CliRunner()
@@ -398,3 +415,170 @@ def test_smoke_identity_load_executes(
     assert "Identity load completed" in result.stdout
     assert "Customers: 20" in result.stdout
     assert "Total identity rows: 80" in result.stdout
+
+
+def test_load_all_runs_in_dependency_order(
+    monkeypatch,
+) -> None:
+    execution_order: list[str] = []
+
+    monkeypatch.setattr(
+        cli_module,
+        "check_database",
+        lambda settings: execution_order.append("validate"),
+    )
+
+    monkeypatch.setattr(
+        cli_module,
+        "load_identity_records",
+        lambda settings, profile: (
+            execution_order.append("identity")
+            or IdentityLoadResult(
+                customers=20,
+                credentials=20,
+                addresses=40,
+                default_addresses=20,
+            )
+        ),
+    )
+
+    monkeypatch.setattr(
+        cli_module,
+        "load_catalog_records",
+        lambda settings, profile: (
+            execution_order.append("catalog")
+            or CatalogLoadResult(
+                brands=5,
+                categories=10,
+                products=50,
+                product_prices=100,
+            )
+        ),
+    )
+
+    monkeypatch.setattr(
+        cli_module,
+        "load_inventory_records",
+        lambda settings, profile: (
+            execution_order.append("inventory")
+            or InventoryLoadResult(
+                warehouses=3,
+                stock=100,
+                reorder_required=10,
+            )
+        ),
+    )
+
+    monkeypatch.setattr(
+        cli_module,
+        "load_commerce_records",
+        lambda settings, profile: (
+            execution_order.append("commerce")
+            or CommerceLoadResult(
+                carts=102,
+                cart_items=306,
+                active_carts=2,
+            )
+        ),
+    )
+
+    monkeypatch.setattr(
+        cli_module,
+        "load_order_records",
+        lambda settings, profile: (
+            execution_order.append("orders")
+            or OrderLoadResult(
+                orders=100,
+                order_items=300,
+                order_addresses=200,
+                status_history=300,
+            )
+        ),
+    )
+
+    monkeypatch.setattr(
+        cli_module,
+        "load_reservation_records",
+        lambda settings, profile: (
+            execution_order.append("reservations")
+            or ReservationLoadResult(
+                reservations=270,
+                reserved=27,
+                consumed=231,
+                released=12,
+                active_reserved_quantity=73,
+                stock_reserved_quantity=73,
+            )
+        ),
+    )
+
+    monkeypatch.setattr(
+        cli_module,
+        "load_payment_records",
+        lambda settings, profile: (
+            execution_order.append("payments")
+            or PaymentLoadResult(
+                payments=100,
+                attempts=120,
+                status_history=200,
+                retry_payments=20,
+                total_paid=Decimal("777942.1400"),
+                total_refunded=Decimal("39005.4900"),
+            )
+        ),
+    )
+
+    monkeypatch.setattr(
+        cli_module,
+        "load_event_records",
+        lambda settings, profile: (
+            execution_order.append("events")
+            or EventLoadResult(
+                outbox_events=300,
+                published_events=290,
+                pending_events=10,
+                audit_events_attempted=400,
+                audit_events_inserted=400,
+            )
+        ),
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "load-all",
+            "--profile",
+            "smoke",
+        ],
+    )
+
+    assert result.exit_code == 0
+
+    assert execution_order == [
+        "validate",
+        "identity",
+        "catalog",
+        "inventory",
+        "commerce",
+        "orders",
+        "reservations",
+        "payments",
+        "events",
+    ]
+
+    assert "Complete load finished" in result.stdout
+    assert "Complete total: 3,046" in result.stdout
+
+
+def test_large_complete_load_requires_yes() -> None:
+    result = runner.invoke(
+        app,
+        [
+            "load-all",
+            "--profile",
+            "large",
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert "Execution blocked" in result.stdout

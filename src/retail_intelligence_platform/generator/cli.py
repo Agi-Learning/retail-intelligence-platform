@@ -15,11 +15,26 @@ from retail_intelligence_platform.generator.database import (
 from retail_intelligence_platform.generator.loaders.catalog import (
     load_catalog as load_catalog_records,
 )
+from retail_intelligence_platform.generator.loaders.commerce import (
+    load_commerce as load_commerce_records,
+)
+from retail_intelligence_platform.generator.loaders.events import (
+    load_events as load_event_records,
+)
 from retail_intelligence_platform.generator.loaders.identity import (
     load_identity as load_identity_records,
 )
 from retail_intelligence_platform.generator.loaders.inventory import (
     load_inventory as load_inventory_records,
+)
+from retail_intelligence_platform.generator.loaders.orders import (
+    load_orders as load_order_records,
+)
+from retail_intelligence_platform.generator.loaders.payments import (
+    load_payments as load_payment_records,
+)
+from retail_intelligence_platform.generator.loaders.reservations import (
+    load_reservations as load_reservation_records,
 )
 from retail_intelligence_platform.generator.profiles import (
     available_profiles,
@@ -396,6 +411,116 @@ def load_foundation_command(
     console.print(f"Catalogue rows: {catalog_result.total_rows:,}")
     console.print(f"Inventory rows: {inventory_result.total_rows:,}")
     console.print(f"Foundation total: {total_rows:,}")
+
+
+@app.command("load-all")
+def load_all_command(
+    profile_name: Annotated[
+        str | None,
+        typer.Option(
+            "--profile",
+            "-p",
+            help="Generation profile name.",
+        ),
+    ] = None,
+    yes: Annotated[
+        bool,
+        typer.Option(
+            "--yes",
+            help=("Acknowledge execution of a large generation profile."),
+        ),
+    ] = False,
+) -> None:
+    """Load the complete source-system dataset."""
+
+    settings, profile = resolve_profile(profile_name)
+    require_profile_confirmation(profile, yes)
+
+    console.print(f"[bold]Complete load profile:[/bold] {profile.name}")
+    console.print(f"[bold]Estimated rows:[/bold] {profile.estimated_total_rows:,}")
+
+    try:
+        check_database(settings)
+
+        console.print("[bold]Stage 1/8:[/bold] Identity")
+        identity_result = load_identity_records(
+            settings,
+            profile,
+        )
+
+        console.print("[bold]Stage 2/8:[/bold] Catalogue")
+        catalog_result = load_catalog_records(
+            settings,
+            profile,
+        )
+
+        console.print("[bold]Stage 3/8:[/bold] Inventory")
+        inventory_result = load_inventory_records(
+            settings,
+            profile,
+        )
+
+        console.print("[bold]Stage 4/8:[/bold] Shopping carts")
+        commerce_result = load_commerce_records(
+            settings,
+            profile,
+        )
+
+        console.print("[bold]Stage 5/8:[/bold] Orders")
+        order_result = load_order_records(
+            settings,
+            profile,
+        )
+
+        console.print("[bold]Stage 6/8:[/bold] Inventory reservations")
+        reservation_result = load_reservation_records(
+            settings,
+            profile,
+        )
+
+        console.print("[bold]Stage 7/8:[/bold] Payments")
+        payment_result = load_payment_records(
+            settings,
+            profile,
+        )
+
+        console.print("[bold]Stage 8/8:[/bold] Outbox and audit events")
+        event_result = load_event_records(
+            settings,
+            profile,
+        )
+    except Exception as error:
+        console.print(f"[bold red]Complete load failed:[/bold red] {error}")
+
+        raise typer.Exit(code=1) from error
+
+    total_rows = (
+        identity_result.total_rows
+        + catalog_result.total_rows
+        + inventory_result.total_rows
+        + commerce_result.total_rows
+        + order_result.total_rows
+        + reservation_result.reservations
+        + payment_result.total_rows
+        + event_result.total_generated_rows
+    )
+
+    console.print("[bold green]Complete load finished[/bold green]")
+    console.print(f"Identity rows: {identity_result.total_rows:,}")
+    console.print(f"Catalogue rows: {catalog_result.total_rows:,}")
+    console.print(f"Inventory rows: {inventory_result.total_rows:,}")
+    console.print(f"Shopping-cart rows: {commerce_result.total_rows:,}")
+    console.print(f"Order rows: {order_result.total_rows:,}")
+    console.print(f"Reservation rows: {reservation_result.reservations:,}")
+    console.print(f"Payment rows: {payment_result.total_rows:,}")
+    console.print(f"Event rows: {event_result.total_generated_rows:,}")
+    console.print(f"[bold]Complete total:[/bold] {total_rows:,}")
+
+    if total_rows != profile.estimated_total_rows:
+        console.print(
+            "[bold red]Generated total does not match the profile estimate.[/bold red]"
+        )
+        raise typer.Exit(code=1)
 
 
 if __name__ == "__main__":
