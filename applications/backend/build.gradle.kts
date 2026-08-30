@@ -1,5 +1,6 @@
 plugins {
     base
+    alias(libs.plugins.spring.boot) apply false
 }
 
 allprojects {

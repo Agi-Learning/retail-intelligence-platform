@@ -28,4 +28,5 @@ include(
     ":platform:kafka-starter",
     ":platform:observability-starter",
     ":platform:testing-starter",
+    ":services:identity-service",
 )
