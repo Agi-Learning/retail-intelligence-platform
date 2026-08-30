@@ -1,16 +1,16 @@
-package com.agilearning.retail.identity;
+package com.agilearning.retail.identity.service0001;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
-class IdentityServiceApplicationTest {
+class Identity01ApplicationTest {
 
     @Test
     void applicationEntryPointIsSpringBootApplication() {
         assertThat(
-                IdentityServiceApplication.class.isAnnotationPresent(
+                Identity01Application.class.isAnnotationPresent(
                     SpringBootApplication.class
                 )
             )

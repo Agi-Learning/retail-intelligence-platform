@@ -1,6 +1,9 @@
 spring:
   application:
-    name: identity-service
+    name: identity-01
+
+app:
+  api-base-path: /api/v1/identity/01
 
 server:
   port: ${SERVER_PORT:8081}
