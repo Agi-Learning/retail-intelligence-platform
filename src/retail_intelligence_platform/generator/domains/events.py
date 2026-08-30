@@ -38,13 +38,14 @@ class OutboxEventRecord:
 
 @dataclass(frozen=True, slots=True)
 class AuditEventRecord:
+    event_key: UUID
     actor_type: str
     actor_id: str | None
     action: str
     entity_type: str
     entity_id: str
-    source_ip: str
-    correlation_id: UUID
+    source_ip: str | None
+    correlation_id: UUID | None
     details: dict[str, Any]
     occurred_at: datetime
 
@@ -58,6 +59,18 @@ def event_uuid(
     return uuid5(
         _EVENT_NAMESPACE,
         f"{event_type}:{order_number}",
+    )
+
+
+def stable_audit_event_key(
+    order_public_id: UUID,
+    action: str,
+) -> UUID:
+    """Return a stable idempotency key for one generated audit event."""
+
+    return uuid5(
+        _EVENT_NAMESPACE,
+        f"audit:{order_public_id}:{action}",
     )
 
 
@@ -177,19 +190,24 @@ def generate_audit_events(
                 if actor_type == "CUSTOMER"
                 else "synthetic-generator"
             )
+            occurred_at = order.created_at + timedelta(minutes=event_offset)
 
             yield AuditEventRecord(
-                actor_type=actor_type,
-                actor_id=actor_id,
-                action=action,
-                entity_type=entity_type,
+                event_key=stable_audit_event_key(
+                    order.public_id,
+                    "ORDER_CREATED",
+                ),
+                actor_type="CUSTOMER",
+                actor_id=order.customer_email,
+                action="ORDER_CREATED",
+                entity_type="ORDER",
                 entity_id=str(order.public_id),
                 source_ip=source_ip,
                 correlation_id=correlation_id,
                 details={
-                    "order_number": (order.order_number),
+                    "order_number": order.order_number,
                     "order_status": order.status,
-                    "event_source": ("synthetic-generator"),
+                    "event_source": "synthetic-generator",
                 },
-                occurred_at=(order.created_at + timedelta(minutes=event_offset)),
+                occurred_at=occurred_at,
             )

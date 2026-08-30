@@ -89,4 +89,19 @@ def test_audit_fields_respect_constraints() -> None:
         assert event.entity_type.strip()
         assert event.entity_id.strip()
         assert isinstance(event.details, dict)
+        assert event.source_ip is not None
         assert event.source_ip.startswith("198.51.100.")
+
+
+def test_audit_event_keys_are_unique_and_deterministic() -> None:
+    profile = get_profile("smoke")
+
+    first_run = list(generate_audit_events(profile))
+    second_run = list(generate_audit_events(profile))
+
+    first_keys = [record.event_key for record in first_run]
+    second_keys = [record.event_key for record in second_run]
+
+    assert len(first_keys) == len(first_run)
+    assert len(set(first_keys)) == len(first_keys)
+    assert first_keys == second_keys
