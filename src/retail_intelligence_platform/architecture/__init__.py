@@ -18,9 +18,15 @@ from retail_intelligence_platform.architecture.registry import (
     ArchitectureValidationError,
     validate_architecture,
 )
+from retail_intelligence_platform.architecture.services import (
+    SERVICE_MANIFEST_COLUMNS,
+    validate_service_manifest,
+    write_service_manifest,
+)
 
 __all__ = [
     "MANIFEST_COLUMNS",
+    "SERVICE_MANIFEST_COLUMNS",
     "ArchitectureSummary",
     "ArchitectureValidationError",
     "CdcMode",
@@ -30,6 +36,8 @@ __all__ = [
     "summarize_table_policies",
     "validate_architecture",
     "validate_implementation_manifest",
+    "validate_service_manifest",
     "validate_table_policies",
     "write_implementation_manifest",
+    "write_service_manifest",
 ]
