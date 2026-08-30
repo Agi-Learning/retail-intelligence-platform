@@ -92,3 +92,4 @@ def test_backend_versions_and_paths_are_standardized(
     assert all(row["spring_boot_version"] == "4.1.1" for row in rows)
     assert len({row["backend_module_path"] for row in rows}) == 1_000
     assert len({row["java_package"] for row in rows}) == 1_000
+    assert all(row["gradle_version"] == "9.7.1" for row in rows)
