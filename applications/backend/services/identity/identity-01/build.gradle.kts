@@ -4,6 +4,8 @@ plugins {
 }
 
 dependencies {
+    runtimeOnly("org.postgresql:postgresql")
+
     implementation(project(":platform:service-starter"))
     implementation(project(":platform:security-starter"))
     implementation(project(":platform:kafka-starter"))
