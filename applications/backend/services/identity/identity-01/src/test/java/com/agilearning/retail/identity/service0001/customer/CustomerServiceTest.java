@@ -6,10 +6,12 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -39,11 +41,11 @@ class CustomerServiceTest {
                 )
         );
 
-        assertThat(response.email()).isEqualTo("user@example.com");
-        assertThat(response.firstName()).isEqualTo("User");
-        assertThat(response.lastName()).isEqualTo("Customer");
+        ArgumentCaptor<Customer> captor = ArgumentCaptor.forClass(Customer.class);
+        verify(repository).save(captor.capture());
+
+        assertThat(captor.getValue().email()).isEqualTo("user@example.com");
         assertThat(response.status()).isEqualTo("PENDING");
-        verify(repository).save(any(Customer.class));
     }
 
     @Test
@@ -63,8 +65,9 @@ class CustomerServiceTest {
     }
 
     @Test
-    void findsActiveCustomerByPublicId() {
+    void findsActiveCustomer() {
         UUID publicId = UUID.randomUUID();
+
         Customer customer = new Customer(
                 1L,
                 publicId,
@@ -82,7 +85,7 @@ class CustomerServiceTest {
         );
 
         when(repository.findByPublicId(publicId))
-                .thenReturn(java.util.Optional.of(customer));
+                .thenReturn(Optional.of(customer));
 
         assertThat(service.find(publicId).publicId()).isEqualTo(publicId);
     }

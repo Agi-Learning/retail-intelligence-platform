@@ -1,7 +1,6 @@
 package com.agilearning.retail.identity.service0001.customer;
 
 import java.time.Instant;
-import java.time.ZoneOffset;
 import java.util.Locale;
 import java.util.UUID;
 
@@ -20,6 +19,7 @@ public class CustomerService {
 
     public CustomerResponse create(CreateCustomerRequest request) {
         String email = request.email().trim().toLowerCase(Locale.ROOT);
+
         if (repository.existsByEmail(email)) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
@@ -27,7 +27,7 @@ public class CustomerService {
             );
         }
 
-        Instant now = Instant.now().atOffset(ZoneOffset.UTC).toInstant();
+        Instant now = Instant.now();
         Customer customer = new Customer(
                 null,
                 UUID.randomUUID(),
@@ -61,6 +61,7 @@ public class CustomerService {
         if (value == null) {
             return null;
         }
+
         String normalized = value.trim();
         return normalized.isEmpty() ? null : normalized;
     }

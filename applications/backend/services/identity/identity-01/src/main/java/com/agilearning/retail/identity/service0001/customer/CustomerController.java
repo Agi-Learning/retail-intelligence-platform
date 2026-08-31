@@ -28,6 +28,7 @@ public class CustomerController {
             @Valid @RequestBody CreateCustomerRequest request
     ) {
         CustomerResponse response = service.create(request);
+
         return ResponseEntity
                 .created(URI.create(
                         "/api/v1/identity/01/customers/" + response.publicId()
