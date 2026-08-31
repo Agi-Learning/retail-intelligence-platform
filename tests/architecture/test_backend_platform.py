@@ -70,7 +70,7 @@ def test_service_starter_contains_common_capabilities() -> None:
     for dependency in (
         "spring-boot-starter-web",
         "spring-boot-starter-validation",
-        "spring-boot-starter-jdbc",
+        "spring-boot-starter-data-jdbc",
         "spring-boot-starter-actuator",
         "flyway-core",
     ):
